@@ -1,0 +1,21 @@
+{
+  "name": "AIS",
+  "private": true,
+  "license": "MIT",
+  "devDependencies": {
+    "husky": "^6.0.0",
+    "lint-staged": "^11.0.0",
+    "prettier": "^2.3.0",
+    "typescript": "^4.2.4"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,less,scss,md}": [
+      "prettier --write"
+    ]
+  }
+}
