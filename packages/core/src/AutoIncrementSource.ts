@@ -3,28 +3,50 @@
  * @author junbao <junbao@mymoement.com>
  */
 
-import { CronExpression } from 'cron-parser';
+import { CronExpression, parseExpression } from 'cron-parser';
 import { JSONValue } from './types';
 
-export class AutoIncrementSource {
+export interface AutoIncrementSourceOptions {
   name: string;
+  type: 'random-float' | 'random-int' | 'range';
+  minValue: number;
+  maxValue: number;
+
   initialValue: number;
   stepValue: number;
-  stopValue: number;
+  maxStep: number;
   resetPeriod: string | null;
-  currentValue: number;
+}
+
+export interface AutoIncrementSourceModel extends AutoIncrementSourceOptions {
+  value: number;
   createdAt: Date;
   executeCount: number;
   executedAt: Date;
+}
+
+export class AutoIncrementSource {
+  model: AutoIncrementSourceModel;
   resetPeriodExpression: CronExpression | null;
 
-  constructor(options: JSONValue<AutoIncrementSource>) {
+  constructor(model: JSONValue<AutoIncrementSourceModel>) {
+    this.model = {
+      ...model,
+      createdAt: new Date(model.createdAt),
+      executedAt: new Date(model.executedAt),
+    };
+    if (model.resetPeriod) {
+      this.resetPeriodExpression = parseExpression(model.resetPeriod);
+    } else {
+      this.resetPeriodExpression = null;
+    }
   }
 
   current(): number {
-    return this.currentValue;
+    return this.model.value;
   }
 
   next(): number {
+    throw new Error('not implemented');
   }
 }

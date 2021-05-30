@@ -6,6 +6,7 @@
 import { sprintf } from 'sprintf-js';
 import strftime from 'strftime';
 import { AutoIncrementSource } from './AutoIncrementSource';
+import { JSONValue } from './types';
 
 export interface SourceChunk {
   type: 'source';
@@ -60,14 +61,27 @@ export interface SerialNumberOptions {
   shortcut: string;
 }
 
+export interface SerialNumberModel extends SerialNumberOptions {
+  value: string;
+  createdAt: Date;
+  executeCount: number;
+  executedAt: Date;
+}
+
 export class SerialNumber {
-  options!: SerialNumberOptions;
+  model: SerialNumberModel;
+
   parsedExpression!: Array<LiteralChunk | SourceChunk>;
   sources: Map<string, AutoIncrementSource>;
 
-  constructor(options: SerialNumberOptions, sources: Map<string, AutoIncrementSource>) {
+  constructor(model: JSONValue<SerialNumberModel>, sources: Map<string, AutoIncrementSource>) {
+    this.model = {
+      ...model,
+      createdAt: new Date(model.createdAt),
+      executedAt: new Date(model.executedAt),
+    };
     this.sources = sources;
-    this.init(options);
+    this.parsedExpression = this.parse(model.expression);
   }
 
   private parse(expression: string) {
@@ -104,26 +118,22 @@ export class SerialNumber {
     return results.filter((r) => r.type === 'source' || r.value);
   }
 
-  init(options: SerialNumberOptions) {
-    this.options = options;
-    this.parsedExpression = this.parse(options.expression);
-  }
-
   current(): string {
-    let now: Date;
-    return this.parsedExpression.map((t) => {
-      if (t.type === 'literal') {
-        return strftime(t.value, (now ||= new Date()));
-      } else {
-        return sprintf(t.format, this.sources.get(t.name)!.currentValue);
-      }
-    }).join('');
+    return this.model.value;
   }
 
   next(): string {
     this.parsedExpression.forEach((t) => {
       t.type === 'source' && this.sources.get(t.name)!.next();
     });
-    return this.current();
+    let now: Date;
+    this.model.value = this.parsedExpression.map((t) => {
+      if (t.type === 'literal') {
+        return strftime(t.value, (now ||= new Date()));
+      } else {
+        return sprintf(t.format, this.sources.get(t.name)!.current());
+      }
+    }).join('');
+    return this.model.value;
   }
 }
